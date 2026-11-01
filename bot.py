@@ -4,7 +4,7 @@ import asyncio
 from rubka import Robot
 
 # ⚠️ توکن جدید خودت رو اینجا بذار
-TOKEN = "CFCIGC0WIWJFSIRMILWIZEWKAQAYRILWRCDPGRXCPRKGAKDVSNNDSGEEAUVRNYHQ"
+TOKEN = os.getenv("BOT_TOKEN")
 bot = Robot(TOKEN)
 
 FIXED_MEMBERS = ["سیرانی", "صفرزاده", "عرشیا", "خرم", "سید", "رسول", "نوآذر", "مجتبی", "نصیری", "فراهانی"]
