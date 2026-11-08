@@ -19,7 +19,6 @@ def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    # مقدار پیش‌فرض جلسات ماه 4 است
     return {"present": {}, "paid": {}, "debts": {}, "credits": {}, "monthly_sessions": 4}
 
 def save_data(data):
@@ -62,7 +61,6 @@ def show_list(data):
         
         lines.append(f"\n💰 جمع قابل دریافت این هفته: {total} تومان")
     
-    # نمایش بدهکاران کل (هفته‌های گذشته)
     active_debts = {k: v for k, v in debts.items() if v > 0}
     if active_debts:
         lines.append("\n🔴 بدهکاران هفته‌های گذشته:")
@@ -162,12 +160,11 @@ async def handle(bot, message):
         return
 
     if text == "هفته جدید":
-        # دیگه بدهی‌ها منتقل نمیشن چون قبلا ثبت شدن
-        # فقط لیست حاضرین و وضعیت پرداخت این هفته ریست میشه
+        # پاکسازی کامل دیتای حضور برای هفته جدید
         data["present"] = {}
         data["paid"] = {}
         save_data(data)
-        await message.reply("🔄 لیست این هفته پاک شد. بدهی‌ها و اعتبارها حفظ شدند. آماده هفته جدید!")
+        await message.reply("🔄 لیست این هفته کاملاً پاک شد. بدهی‌ها و اعتبارها حفظ شدند. آماده هفته جدید!")
         return
         
     if text == "ریست کامل":
@@ -195,7 +192,6 @@ async def handle(bot, message):
             current_sessions = data.get("monthly_sessions", 4)
             current_credits = data["credits"].get(name, 0)
             
-            # محاسبه جلسات باقی‌مانده از دوره جدید
             used_sessions = max(0, current_sessions - current_credits)
             new_credits_to_add = current_sessions - used_sessions
             
@@ -227,7 +223,6 @@ async def handle(bot, message):
                 data["credits"][name] -= 1
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
-                # اگر اعتبار نداره، بدهی این هفته رو ثبت کن
                 price = PRICE_FIXED
                 data["debts"][name] = data["debts"].get(name, 0) + price
                 msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
