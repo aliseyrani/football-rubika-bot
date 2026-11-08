@@ -3,7 +3,7 @@ import os
 import asyncio
 from rubka import Robot
 
-# ⚠️ توکن جدید خودت رو اینجا بذار
+# ⚠️ توکن خودت رو اینجا بذار
 TOKEN = "CFCIGC0WIWJFSIRMILWIZEWKAQAYRILWRCDPGRXCPRKGAKDVSNNDSGEEAUVRNYHQ"
 bot = Robot(TOKEN)
 
@@ -71,10 +71,15 @@ def show_list(data):
             if amount > 0:
                 lines.append(f"🔴 {name} — {amount}")
     
-    # اضافه شدن شماره کارت به انتهای لیست
     lines.append(f"\n💳 شماره کارت جهت واریز:\n`{CARD_NUMBER}`")
     
     return "\n".join(lines)
+
+def clean_name(name):
+    words = name.split()
+    ignore_words = ["شد", "کردم", "کرد", "را", "و", "هست", "نیست"]
+    cleaned = [w for w in words if w not in ignore_words]
+    return " ".join(cleaned)
 
 def parse_command(text):
     text = text.strip()
@@ -114,13 +119,6 @@ def parse_command(text):
         return action, clean_name(" ".join(name_parts))
     return None, None
 
-# تابع جدید برای پاک کردن کلمات اضافی مثل "شد" و "کردم" از اسم
-def clean_name(name):
-    words = name.split()
-    ignore_words = ["شد", "کردم", "کرد", "را", "و", "هست", "نیست"]
-    cleaned = [w for w in words if w not in ignore_words]
-    return " ".join(cleaned)
-
 @bot.on_message()
 async def handle(bot, message):
     text = (message.text or "").strip()
@@ -131,7 +129,7 @@ async def handle(bot, message):
             "سلام! ⚽ بات مدیریت فوتبال گیاه‌شناسی\n\n"
             "دستورها:\n"
             "`بدهی اول ماه [اسم‌ها]` — ثبت لیست بدهکاران ماه\n"
-            "`پرداخت ماهانه [اسم]` — اضافه شدن ۴ جلسه اعتبار\n"
+            "`پرداخت ماهانه [اسم]` — اضافه شدن اعتبار (با محاسبه جلسات رفته)\n"
             "`میام [اسم]` — اعلام حضور\n"
             "`نیام [اسم]` — انصراف\n"
             "`رایگان [اسم]` — ثبت مهمان رایگان\n"
@@ -148,8 +146,7 @@ async def handle(bot, message):
         return
         
     if text.startswith("حساب من "):
-        name = text[8:].strip()
-        name = clean_name(name)
+        name = clean_name(text[8:].strip())
         debt = data["debts"].get(name, 0)
         paid = data["paid"].get(name, False)
         credit = data.get("credits", {}).get(name, 0)
@@ -202,11 +199,20 @@ async def handle(bot, message):
     if action == "monthly_paid":
         if name in FIXED_MEMBERS:
             if "credits" not in data: data["credits"] = {}
-            data["credits"][name] = data["credits"].get(name, 0) + MONTHLY_SESSIONS
+            
+            current_credits = data["credits"].get(name, 0)
+            used_sessions = max(0, MONTHLY_SESSIONS - current_credits)
+            new_credits_to_add = MONTHLY_SESSIONS - used_sessions
+            
+            data["credits"][name] = current_credits + new_credits_to_add
+            
             if name in data.get("month_debts", []):
                 data["month_debts"].remove(name)
+            if name in data["debts"]:
+                del data["debts"][name]
+                
             save_data(data)
-            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد.\n💳 {MONTHLY_SESSIONS} جلسه اعتبار اضافه شد.")
+            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد.\n💳 {new_credits_to_add} جلسه اعتبار جدید اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
         else:
             await message.reply(f"⚠️ {name} جزو نفرات ثابت نیست.")
         return
@@ -257,6 +263,12 @@ async def handle(bot, message):
                 del data["debts"][name]
             save_data(data)
             await message.reply(f"✅ پرداخت {name} ثبت شد.\n\n" + show_list(data))
+        elif name in FIXED_MEMBERS and name in data.get("month_debts", []):
+            data["month_debts"].remove(name)
+            if name in data["debts"]:
+                del data["debts"][name]
+            save_data(data)
+            await message.reply(f"✅ پرداخت {name} ثبت شد و بدهی ماهش صفر شد.")
         else:
             await message.reply(f"⚠️ {name} توی لیست نیست.")
 
