@@ -14,16 +14,12 @@ PRICE_GUEST = 100
 CARD_NUMBER = "6037997269607413"
 
 DATA_FILE = "football_data.json"
-CACHE_DB = "RubkaSaveMessage.db" # فایل حافظه کتابخانه
+CACHE_DB = "RubkaSaveMessage.db"
 
-# --- پاک کردن حافظه قدیمی کتابخانه برای جلوگیری از ارسال لیست‌های تکراری ---
+# پاک کردن حافظه کتابخانه
 if os.path.exists(CACHE_DB):
-    try:
-        os.remove(CACHE_DB)
-        print("Old cache deleted.")
-    except:
-        pass
-# -------------------------------------------------------------------------
+    try: os.remove(CACHE_DB)
+    except: pass
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -88,30 +84,18 @@ def clean_name(name):
 
 def parse_command(text):
     text = text.strip()
-    
-    long_actions = {
-        "تنظیم جلسات": "set_sessions",
-        "پرداخت ماهانه": "monthly_paid",
-        "شروع هفته": "new_week",
-    }
+    long_actions = {"تنظیم جلسات": "set_sessions", "پرداخت ماهانه": "monthly_paid"}
     
     for phrase, act in long_actions.items():
         if text.startswith(phrase + " "):
-            name = text[len(phrase):].strip()
-            return act, clean_name(name)
+            return act, clean_name(text[len(phrase):].strip())
         elif text.endswith(" " + phrase):
-            name = text[:-len(phrase)].strip()
-            return act, clean_name(name)
+            return act, clean_name(text[:-len(phrase)].strip())
 
     words = text.split()
     if len(words) < 2: return None, None
     
-    short_actions = {
-        "میام": "present", "حاضر": "present",
-        "نیام": "absent", "نمیام": "absent",
-        "پرداخت": "paid", "رایگان": "free"
-    }
-    
+    short_actions = {"میام": "present", "حاضر": "present", "نیام": "absent", "نمیام": "absent", "پرداخت": "paid", "رایگان": "free"}
     action = None
     name_parts = []
     
@@ -131,20 +115,7 @@ async def handle(bot, message):
     data = load_data()
     
     if text in ["/start", "/help"]:
-        await message.reply(
-            "سلام! ⚽ بات مدیریت فوتبال گیاه‌شناسی\n\n"
-            "دستورها:\n"
-            "`شروع هفته` — پاک کردن لیست برای هفته جدید (حساب‌ها حفظ می‌شوند)\n"
-            "`تنظیم جلسات [عدد]` — تعیین تعداد جلسات ماه (پیش‌فرض ۴)\n"
-            "`پرداخت ماهانه [اسم]` — اضافه شدن اعتبار\n"
-            "`میام [اسم]` — اعلام حضور\n"
-            "`نیام [اسم]` — انصراف\n"
-            "`رایگان [اسم]` — ثبت مهمان رایگان\n"
-            "`پرداخت [اسم]` — تسویه هفتگی\n"
-            "`لیست` — دیدن لیست\n"
-            "`حساب من [اسم]` — چک کردن وضعیت\n"
-            "`ریست کامل` — پاک کردن کل اطلاعات"
-        )
+        await message.reply("سلام! ⚽ بات مدیریت فوتبال\n\nدستورات:\n`تنظیم جلسات [عدد]`\n`پرداخت ماهانه [اسم]`\n`میام [اسم]`\n`نیام [اسم]`\n`رایگان [اسم]`\n`پرداخت [اسم]`\n`لیست`\n`حساب من [اسم]`\n`شروع هفته`\n`ریست کامل`")
         return
     
     if text == "لیست":
@@ -154,17 +125,10 @@ async def handle(bot, message):
     if text.startswith("حساب من "):
         name = clean_name(text[8:].strip())
         debt = data["debts"].get(name, 0)
-        paid = data["paid"].get(name, False)
         credit = data.get("credits", {}).get(name, 0)
         
-        if name in FIXED_MEMBERS: kind = "ثابت"
-        elif name in data["present"]: kind = data["present"][name]
-        else: kind = "نامشخص"
-        
-        msg = f"👤 {name} ({kind})\n"
-        if kind == "ثابت":
-            if credit > 0: msg += f"💳 اعتبار: {credit} جلسه\n"
-            else: msg += "🟢 اعتبار ماهانه تمام شده.\n"
+        msg = f"👤 {name}\n"
+        if credit > 0: msg += f"💳 اعتبار: {credit} جلسه\n"
         if debt > 0: msg += f"🔴 بدهی کل: {debt} تومان"
         else: msg += "🟢 بدهی نداری."
         await message.reply(msg)
@@ -174,7 +138,7 @@ async def handle(bot, message):
         data["present"] = {}
         data["paid"] = {}
         save_data(data)
-        await message.reply("🔄 لیست این هفته کاملاً پاک شد. بدهی‌ها و اعتبارها حفظ شدند. آماده هفته جدید!")
+        await message.reply("🔄 لیست این هفته پاک شد. بدهی‌ها و اعتبارها حفظ شدند.")
         return
         
     if text == "ریست کامل":
@@ -190,7 +154,7 @@ async def handle(bot, message):
             count = int(name)
             data["monthly_sessions"] = count
             save_data(data)
-            await message.reply(f"✅ تعداد جلسات این ماه روی {count} تنظیم شد.")
+            await message.reply(f"✅ تعداد جلسات ماه روی {count} تنظیم شد.")
         except:
             await message.reply("⚠️ لطفاً یه عدد معتبر وارد کن. (مثال: تنظیم جلسات 5)")
         return
@@ -199,19 +163,17 @@ async def handle(bot, message):
         if name in FIXED_MEMBERS:
             if "credits" not in data: data["credits"] = {}
             
-            current_sessions = data.get("monthly_sessions", 4)
+            # منطق ساده: فقط تعداد جلسات ماه رو اضافه کن و بدهی رو صفر کن
+            sessions_to_add = data.get("monthly_sessions", 4)
             current_credits = data["credits"].get(name, 0)
             
-            used_sessions = max(0, current_sessions - current_credits)
-            new_credits_to_add = current_sessions - used_sessions
-            
-            data["credits"][name] = current_credits + new_credits_to_add
+            data["credits"][name] = current_credits + sessions_to_add
             
             if name in data["debts"]:
                 del data["debts"][name]
                 
             save_data(data)
-            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد.\n💳 {new_credits_to_add} جلسه اعتبار جدید اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
+            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد.\n💳 {sessions_to_add} جلسه اعتبار اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
         else:
             await message.reply(f"⚠️ {name} جزو نفرات ثابت نیست.")
         return
@@ -233,12 +195,10 @@ async def handle(bot, message):
                 data["credits"][name] -= 1
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
-                price = PRICE_FIXED
-                data["debts"][name] = data["debts"].get(name, 0) + price
+                data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
                 msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
                 
         save_data(data)
-        price = PRICE_FIXED if kind == "ثابت" else PRICE_GUEST
         await message.reply(f"✅ {name} ({kind}) ثبت شد.{msg_add}\n\n" + show_list(data))
         
     elif action == "free":
@@ -261,16 +221,12 @@ async def handle(bot, message):
             await message.reply(f"❌ {name} حذف شد.\n\n" + show_list(data))
     
     elif action == "paid":
-        if name in data["present"]:
+        if name in data["present"] or name in data["debts"]:
             data["paid"][name] = True
             if name in data["debts"]:
                 del data["debts"][name]
             save_data(data)
-            await message.reply(f"✅ پرداخت {name} ثبت شد.\n\n" + show_list(data))
-        elif name in FIXED_MEMBERS and name in data["debts"]:
-            del data["debts"][name]
-            save_data(data)
-            await message.reply(f"✅ بدهی {name} تسویه شد.\n\n" + show_list(data))
+            await message.reply(f"✅ پرداخت {name} ثبت شد و بدهی‌اش صفر شد.\n\n" + show_list(data))
         else:
             await message.reply(f"⚠️ {name} توی لیست نیست یا بدهی نداره.")
 
