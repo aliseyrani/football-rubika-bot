@@ -14,6 +14,16 @@ PRICE_GUEST = 100
 CARD_NUMBER = "6037997269607413"
 
 DATA_FILE = "football_data.json"
+CACHE_DB = "RubkaSaveMessage.db" # فایل حافظه کتابخانه
+
+# --- پاک کردن حافظه قدیمی کتابخانه برای جلوگیری از ارسال لیست‌های تکراری ---
+if os.path.exists(CACHE_DB):
+    try:
+        os.remove(CACHE_DB)
+        print("Old cache deleted.")
+    except:
+        pass
+# -------------------------------------------------------------------------
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -82,6 +92,7 @@ def parse_command(text):
     long_actions = {
         "تنظیم جلسات": "set_sessions",
         "پرداخت ماهانه": "monthly_paid",
+        "شروع هفته": "new_week",
     }
     
     for phrase, act in long_actions.items():
@@ -123,6 +134,7 @@ async def handle(bot, message):
         await message.reply(
             "سلام! ⚽ بات مدیریت فوتبال گیاه‌شناسی\n\n"
             "دستورها:\n"
+            "`شروع هفته` — پاک کردن لیست برای هفته جدید (حساب‌ها حفظ می‌شوند)\n"
             "`تنظیم جلسات [عدد]` — تعیین تعداد جلسات ماه (پیش‌فرض ۴)\n"
             "`پرداخت ماهانه [اسم]` — اضافه شدن اعتبار\n"
             "`میام [اسم]` — اعلام حضور\n"
@@ -131,7 +143,6 @@ async def handle(bot, message):
             "`پرداخت [اسم]` — تسویه هفتگی\n"
             "`لیست` — دیدن لیست\n"
             "`حساب من [اسم]` — چک کردن وضعیت\n"
-            "`هفته جدید` — پاک کردن لیست برای هفته بعد\n"
             "`ریست کامل` — پاک کردن کل اطلاعات"
         )
         return
@@ -159,8 +170,7 @@ async def handle(bot, message):
         await message.reply(msg)
         return
 
-    if text == "هفته جدید":
-        # پاکسازی کامل دیتای حضور برای هفته جدید
+    if text == "شروع هفته":
         data["present"] = {}
         data["paid"] = {}
         save_data(data)
