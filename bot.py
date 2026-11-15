@@ -44,18 +44,15 @@ def show_list(data):
         for i, (name, kind) in enumerate(present.items(), 1):
             if kind == "ثابت":
                 price = PRICE_FIXED
-                if credits.get(name, 0) > 0:
-                    # کسایی که پول ماهانه دادن و اعتبار دارن
+                # تغییر ۱: نمایش اعتبار حتی وقتی 0 هست
+                if name in credits:
                     pay_status = f"✅ (اعتبار: {credits[name]})"
                 else:
-                    # کسایی که اعتبارشون 0 شده
                     if name in debts:
-                        # بدهکارها: 210 بدهی قبلی + 70 جدید
                         pay_status = "⏳"
                         total += price
                     else:
-                        # کسایی که پول ماهانه دادن و الان اعتبارشون 0 شده
-                        pay_status = "✅ پرداخت شده"
+                        pay_status = "✅ پرداخت شده (اعتبار: 0)"
             elif kind == "مهمان":
                 price = PRICE_GUEST
                 pay_status = "✅" if paid.get(name) else "⏳"
@@ -169,15 +166,21 @@ async def handle(bot, message):
         if name in FIXED_MEMBERS:
             if "credits" not in data: data["credits"] = {}
             
-            sessions_to_add = data.get("monthly_sessions", 4)
-            current_credits = data["credits"].get(name, 0)
-            data["credits"][name] = current_credits + sessions_to_add
+            # تغییر ۲: محاسبه هوشمندانه برای هماهنگی با بقیه
+            # پیدا کردن بیشترین اعتبار بین بقیه ثابت‌ها
+            other_credits = [v for k, v in data["credits"].items() if k != name]
+            if other_credits:
+                sessions_to_add = max(other_credits)
+            else:
+                sessions_to_add = data.get("monthly_sessions", 4)
+            
+            data["credits"][name] = sessions_to_add
             
             if name in data["debts"]:
                 del data["debts"][name]
                 
             save_data(data)
-            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد و بدهی‌اش صفر شد.\n💳 {sessions_to_add} جلسه اعتبار اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
+            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد و بدهی‌اش صفر شد.\n💳 {sessions_to_add} جلسه اعتبار اضافه شد تا با بقیه هماهنگ باشید. (کل اعتبار: {data['credits'][name]} جلسه)")
         else:
             await message.reply(f"⚠️ {name} جزو نفرات ثابت نیست.")
         return
@@ -200,11 +203,9 @@ async def handle(bot, message):
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
                 if name in data["debts"]:
-                    # بدهکار: بدهی جدید 70 اضافه می‌شه
                     data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
                     msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
                 else:
-                    # کسی که پول ماهانه داده: بدهی جدید نمی‌خوره، فقط تیک پرداخت می‌خوره
                     data["paid"][name] = True
                     msg_add = f"\n✅ پرداخت ماهانه شما قبلاً ثبت شده است."
                 
