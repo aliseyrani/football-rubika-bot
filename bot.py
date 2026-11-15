@@ -3,7 +3,6 @@ import os
 import asyncio
 from rubka import Robot
 
-# ⚠️ توکن خودت رو اینجا بذار
 TOKEN = "CFCIGC0WIWJFSIRMILWIZEWKAQAYRILWRCDPGRXCPRKGAKDVSNNDSGEEAUVRNYHQ"
 bot = Robot(TOKEN)
 
@@ -48,12 +47,16 @@ def show_list(data):
                 if credits.get(name, 0) > 0:
                     pay_status = f"✅ (اعتبار: {credits[name]})"
                 else:
+                    # اگر اعتبار 0 بود و پرداخت هم نکرده بود
                     pay_status = "✅" if paid.get(name) else "⏳"
-                    total += price
+                    # فقط اگر بدهی جدید ثبت نشده باشه (یعنی جزو بدهکارای قبلی نیست)
+                    if not paid.get(name) and name not in debts:
+                        total += price
             elif kind == "مهمان":
                 price = PRICE_GUEST
                 pay_status = "✅" if paid.get(name) else "⏳"
-                total += price
+                if not paid.get(name) and name not in debts:
+                    total += price
             else: 
                 price = 0
                 pay_status = "🆓"
@@ -192,8 +195,12 @@ async def handle(bot, message):
                 data["credits"][name] -= 1
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
-                data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
-                msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
+                # فقط اگر قبلاً بدهی نداشت، بدهی جدید بزن
+                if name not in data["debts"]:
+                    data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
+                    msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
+                else:
+                    msg_add = f"\n🔴 بدهی قبلی شما حفظ شد."
                 
         save_data(data)
         await message.reply(f"✅ {name} ({kind}) ثبت شد.{msg_add}\n\n" + show_list(data))
