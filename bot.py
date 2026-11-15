@@ -45,13 +45,17 @@ def show_list(data):
             if kind == "ثابت":
                 price = PRICE_FIXED
                 if credits.get(name, 0) > 0:
+                    # کسایی که پول ماهانه دادن و اعتبار دارن
                     pay_status = f"✅ (اعتبار: {credits[name]})"
                 else:
-                    # اگر اعتبار 0 بود و پرداخت هم نکرده بود
-                    pay_status = "✅" if paid.get(name) else "⏳"
-                    # فقط اگر بدهی جدید ثبت نشده باشه (یعنی جزو بدهکارای قبلی نیست)
-                    if not paid.get(name) and name not in debts:
+                    # کسایی که اعتبارشون 0 شده
+                    if name in debts:
+                        # بدهکارها: 210 بدهی قبلی + 70 جدید
+                        pay_status = "⏳"
                         total += price
+                    else:
+                        # کسایی که پول ماهانه دادن و الان اعتبارشون 0 شده
+                        pay_status = "✅ پرداخت شده"
             elif kind == "مهمان":
                 price = PRICE_GUEST
                 pay_status = "✅" if paid.get(name) else "⏳"
@@ -195,12 +199,14 @@ async def handle(bot, message):
                 data["credits"][name] -= 1
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
-                # فقط اگر قبلاً بدهی نداشت، بدهی جدید بزن
-                if name not in data["debts"]:
+                if name in data["debts"]:
+                    # بدهکار: بدهی جدید 70 اضافه می‌شه
                     data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
                     msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
                 else:
-                    msg_add = f"\n🔴 بدهی قبلی شما حفظ شد."
+                    # کسی که پول ماهانه داده: بدهی جدید نمی‌خوره، فقط تیک پرداخت می‌خوره
+                    data["paid"][name] = True
+                    msg_add = f"\n✅ پرداخت ماهانه شما قبلاً ثبت شده است."
                 
         save_data(data)
         await message.reply(f"✅ {name} ({kind}) ثبت شد.{msg_add}\n\n" + show_list(data))
