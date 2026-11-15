@@ -16,7 +16,6 @@ CARD_NUMBER = "6037997269607413"
 DATA_FILE = "football_data.json"
 CACHE_DB = "RubkaSaveMessage.db"
 
-# پاک کردن حافظه کتابخانه
 if os.path.exists(CACHE_DB):
     try: os.remove(CACHE_DB)
     except: pass
@@ -156,24 +155,22 @@ async def handle(bot, message):
             save_data(data)
             await message.reply(f"✅ تعداد جلسات ماه روی {count} تنظیم شد.")
         except:
-            await message.reply("⚠️ لطفاً یه عدد معتبر وارد کن. (مثال: تنظیم جلسات 5)")
+            await message.reply("⚠️ لطفاً یه عدد معتبر وارد کن.")
         return
 
     if action == "monthly_paid":
         if name in FIXED_MEMBERS:
             if "credits" not in data: data["credits"] = {}
             
-            # منطق ساده: فقط تعداد جلسات ماه رو اضافه کن و بدهی رو صفر کن
             sessions_to_add = data.get("monthly_sessions", 4)
             current_credits = data["credits"].get(name, 0)
-            
             data["credits"][name] = current_credits + sessions_to_add
             
             if name in data["debts"]:
                 del data["debts"][name]
                 
             save_data(data)
-            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد.\n💳 {sessions_to_add} جلسه اعتبار اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
+            await message.reply(f"✅ پرداخت ماهانه {name} ثبت شد و بدهی‌اش صفر شد.\n💳 {sessions_to_add} جلسه اعتبار اضافه شد. (کل اعتبار: {data['credits'][name]} جلسه)")
         else:
             await message.reply(f"⚠️ {name} جزو نفرات ثابت نیست.")
         return
