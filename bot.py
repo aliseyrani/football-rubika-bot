@@ -45,11 +45,13 @@ def show_list(data):
         for i, (name, kind) in enumerate(present.items(), 1):
             if kind == "ثابت":
                 price = PRICE_FIXED
+                # اگر اعتبار داشت، نشون بده چقدر مونده
                 if name in credits:
                     pay_status = f"✅ (اعتبار: {credits[name]})"
                 else:
+                    # اگر اعتبار نداشت، ببین بدهکاره یا نه
                     if name in debts and debts[name] > 0:
-                        pay_status = "⏳"
+                        pay_status = "⏳" # منتظر پرداخت
                         total += price
                     else:
                         pay_status = "✅ پرداخت شده (اعتبار: 0)"
@@ -118,7 +120,7 @@ async def handle(bot, message):
     data = load_data()
     
     if text in ["/start", "/help"]:
-        await message.reply("سلام! ⚽ بات مدیریت فوتبال\n\nدستورات:\n`شروع ماه` (صفر کردن اعتبارها و شروع ماه جدید)\n`تنظیم جلسات [عدد]`\n`پرداخت ماهانه [اسم]`\n`میام [اسم]`\n`نیام [اسم]`\n`رایگان [اسم]`\n`پرداخت [اسم]`\n`لیست`\n`حساب من [اسم]`\n`ریست کامل`")
+        await message.reply("سلام! ⚽ بات مدیریت فوتبال\n\nدستورات:\n`شروع ماه`\n`تنظیم جلسات [عدد]`\n`پرداخت ماهانه [اسم]`\n`میام [اسم]`\n`نیام [اسم]`\n`رایگان [اسم]`\n`پرداخت [اسم]`\n`لیست`\n`حساب من [اسم]`\n`ریست کامل`")
         return
     
     if text == "لیست":
@@ -126,18 +128,16 @@ async def handle(bot, message):
         return
 
     if text == "شروع ماه":
-        # پاک کردن لیست حاضرین و اعتبارها، ولی حفظ کردن بدهی‌های قبلی
         data["present"] = {}
         data["paid"] = {}
         data["credits"] = {}
         
-        # مطمئن میشیم همه نفرات ثابت توی لیست بدهی‌ها باشن تا اگه اومدن، بدهی 70 تومنی بخوره
         for member in FIXED_MEMBERS:
             if member not in data["debts"]:
                 data["debts"][member] = 0 
                 
         save_data(data)
-        await message.reply("🔄 ماه جدید شروع شد. اعتبارها صفر شدند ولی بدهی‌های قبلی کاملاً حفظ شدند. (با اولین میام، بدهی ۷۰ تومنی برای ماه جدید ثبت میشه)")
+        await message.reply("🔄 ماه جدید شروع شد. اعتبارها صفر شدند ولی بدهی‌های قبلی کاملاً حفظ شدند.")
         return
         
     if text.startswith("حساب من "):
@@ -203,6 +203,7 @@ async def handle(bot, message):
                 data["credits"][name] -= 1
                 msg_add = f"\n💳 ۱ جلسه کسر شد. (باقی‌مانده: {data['credits'][name]})"
             else:
+                # باگ اصلی اینجا بود: باید فقط 70 تومن اضافه کنه، نه اینکه بدهی قبلی رو صفر کنه
                 data["debts"][name] = data["debts"].get(name, 0) + PRICE_FIXED
                 msg_add = f"\n🔴 بدهی ۷۰ تومانی این هفته ثبت شد."
                 
